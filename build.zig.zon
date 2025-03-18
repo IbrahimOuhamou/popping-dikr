@@ -40,6 +40,10 @@
             .url = "git+https://github.com/castholm/SDL.git#dbb1b96360658f5845ff6fac380c4f13d7276dc2",
             .hash = "sdl-0.2.0+3.2.8-7uIn9FxHfQE325TK7b0qpgt10G3x1xl-3ZMOfTzxUg3C",
         },
+        .sdl_ttf = .{
+            .url = "git+https://github.com/boubl/SDL_ttf.git#e825cdf18bb3aa50ac0e208589963a3a22cddb42",
+            .hash = "sdl_ttf-3.2.0-GgzNnYkKBwAThbqYkz3LyGH7QuL7vT74uoKiHXPOdeQ9",
+        },
     },
     .paths = .{
         "build.zig",

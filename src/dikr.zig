@@ -10,6 +10,7 @@ const c = @cImport({
     // macro magic, 'SDL_MAIN_HANDLED' should be defined before including 'SDL_main.h'.
     @cDefine("SDL_MAIN_HANDLED", {});
     @cInclude("SDL3/SDL_main.h");
+    @cInclude("SDL3_ttf/SDL_ttf.h");
 });
 
 pub fn main() !void {
@@ -23,6 +24,9 @@ pub fn main() !void {
 
     try errify(c.SDL_Init(c.SDL_INIT_VIDEO));
     defer c.SDL_Quit();
+
+    try errify(c.TTF_Init());
+    defer c.TTF_Quit();
 
     const window_w = 640;
     const window_h = 480;
@@ -38,6 +42,15 @@ pub fn main() !void {
     };
     defer c.SDL_DestroyRenderer(renderer);
     defer c.SDL_DestroyWindow(window);
+
+    const font = try errify(c.TTF_OpenFont("res/KacstPoster.ttf", 100));
+    defer c.TTF_CloseFont(font);
+
+    const bismi_allah: [:0]const u8 = "bismi Allah";
+    const surface = try errify(c.TTF_RenderText_Solid(font, bismi_allah, bismi_allah.len, c.SDL_Color{ .a = 255, .r = 255, .g = 255, .b = 255 }));
+    defer c.SDL_DestroySurface(surface);
+
+    const texture = try errify(c.SDL_CreateTextureFromSurface(renderer, surface));
 
     main_loop: while (true) {
 
@@ -65,7 +78,9 @@ pub fn main() !void {
 
             try errify(c.SDL_RenderClear(renderer));
 
-            try errify(c.SDL_SetRenderScale(renderer, 2, 2));
+            // try errify(c.SDL_SetRenderScale(renderer, 2, 2));
+
+            try errify(c.SDL_RenderTexture(renderer, texture, null, null));
 
             try errify(c.SDL_RenderPresent(renderer));
         }
