@@ -46,11 +46,14 @@ pub fn main() !void {
     const font = try errify(c.TTF_OpenFont("res/KacstPoster.ttf", 100));
     defer c.TTF_CloseFont(font);
 
-    const bismi_allah: [:0]const u8 = "bismi Allah";
+    const bismi_allah: [:0]const u8 = "ﻥﺎﻤﺣﺮﻟﺍ";
     const surface = try errify(c.TTF_RenderText_Solid(font, bismi_allah, bismi_allah.len, c.SDL_Color{ .a = 255, .r = 255, .g = 255, .b = 255 }));
     defer c.SDL_DestroySurface(surface);
 
     const texture = try errify(c.SDL_CreateTextureFromSurface(renderer, surface));
+
+    // const destination_rect = c.SDL_Rect{ .h = @intFromFloat(window_h * 0.5), .w = @intFromFloat(window_w * 0.5), .x = 12, .y = 12 };
+    const destination_rect = c.SDL_FRect{ .h = 34, .w = 12 * bismi_allah.len, .x = 12, .y = 12 };
 
     main_loop: while (true) {
 
@@ -80,7 +83,7 @@ pub fn main() !void {
 
             // try errify(c.SDL_SetRenderScale(renderer, 2, 2));
 
-            try errify(c.SDL_RenderTexture(renderer, texture, null, null));
+            try errify(c.SDL_RenderTexture(renderer, texture, null, &destination_rect));
 
             try errify(c.SDL_RenderPresent(renderer));
         }
