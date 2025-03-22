@@ -13,6 +13,21 @@ const c = @cImport({
     @cInclude("SDL3_ttf/SDL_ttf.h");
 });
 
+const screen_h: u16 = 0;
+const screen_w: u16 = 0;
+
+var config = struct {
+    font_size: u8 = 80,
+
+    bg_color: c.SDL_Color = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+    text_color: c.SDL_Color = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
+
+    sleep_time_minutes: u16 = 16,
+    display_time_seconds: u16 = 5,
+}{};
+
+const bismi_allah: [:0]const u8 = "ﻥﺎﻤﺣﺮﻟﺍ";
+
 pub fn main() !void {
     errdefer |err| if (err == error.SdlError) std.log.err("SDL error: {s}", .{c.SDL_GetError()});
 
@@ -28,14 +43,12 @@ pub fn main() !void {
     try errify(c.TTF_Init());
     defer c.TTF_Quit();
 
-    const window_w = 640;
-    const window_h = 480;
     errify(c.SDL_SetHint(c.SDL_HINT_RENDER_VSYNC, "1")) catch {};
 
     const window: *c.SDL_Window, const renderer: *c.SDL_Renderer = create_window_and_renderer: {
         var window: ?*c.SDL_Window = null;
         var renderer: ?*c.SDL_Renderer = null;
-        try errify(c.SDL_CreateWindowAndRenderer("popping dikr", window_w, window_h, 0, &window, &renderer));
+        try errify(c.SDL_CreateWindowAndRenderer("popping dikr", @intCast(config.font_size * bismi_allah.len), config.font_size, 0, &window, &renderer));
         errdefer comptime unreachable;
 
         break :create_window_and_renderer .{ window.?, renderer.? };
@@ -43,17 +56,15 @@ pub fn main() !void {
     defer c.SDL_DestroyRenderer(renderer);
     defer c.SDL_DestroyWindow(window);
 
-    const font = try errify(c.TTF_OpenFont("res/KacstPoster.ttf", 100));
+    const font: *c.TTF_Font = try errify(c.TTF_OpenFont("res/KacstPoster.ttf", 100));
     defer c.TTF_CloseFont(font);
 
-    const bismi_allah: [:0]const u8 = "ﻥﺎﻤﺣﺮﻟﺍ";
-    const surface = try errify(c.TTF_RenderText_Solid(font, bismi_allah, bismi_allah.len, c.SDL_Color{ .a = 255, .r = 255, .g = 255, .b = 255 }));
+    const surface = try errify(c.TTF_RenderText_Solid(font, bismi_allah, bismi_allah.len, config.text_color));
     defer c.SDL_DestroySurface(surface);
 
     const texture = try errify(c.SDL_CreateTextureFromSurface(renderer, surface));
 
-    // const destination_rect = c.SDL_Rect{ .h = @intFromFloat(window_h * 0.5), .w = @intFromFloat(window_w * 0.5), .x = 12, .y = 12 };
-    const destination_rect = c.SDL_FRect{ .h = 34, .w = 12 * bismi_allah.len, .x = 12, .y = 12 };
+    const destination_rect = c.SDL_FRect{ .w = @floatFromInt(config.font_size * bismi_allah.len), .h = @floatFromInt(config.font_size), .x = 0, .y = 0 };
 
     main_loop: while (true) {
 
@@ -77,7 +88,7 @@ pub fn main() !void {
         }
         // Draw
         {
-            try errify(c.SDL_SetRenderDrawColor(renderer, 0x47, 0x5b, 0x8d, 0xff));
+            try errify(c.SDL_SetRenderDrawColor(renderer, config.bg_color.r, config.bg_color.g, config.bg_color.b, config.bg_color.a));
 
             try errify(c.SDL_RenderClear(renderer));
 
