@@ -27,6 +27,10 @@ const config_zon =
     \\  .display_time_seconds = 5,
     \\}
 ;
+const adkar = [_][:0]u8{
+    @constCast("ﻥﺎﻤﺣﺮﻟﺍ"),
+    @constCast("ﻥﺎﻤﺣﺮﻟﺍ"),
+};
 
 const Config = struct {
     font_size: u8 = 80,
@@ -40,10 +44,16 @@ const Config = struct {
 
 var config: Config = undefined;
 
-const bismi_allah: [:0]const u8 = "ﻥﺎﻤﺣﺮﻟﺍ";
-
 pub fn main() !void {
     config = try std.zon.parse.fromSlice(Config, std.heap.c_allocator, config_zon, null, .{ .ignore_unknown_fields = true });
+    var bismi_allah: []u8 = undefined;
+    bismi_allah = adkar[adkar.len - 1];
+
+    // const stdout_file = std.io.getStdOut().writer();
+    // var bw = std.io.bufferedWriter(stdout_file);
+    // const stdout = bw.writer();
+    // try std.zon.stringify.serialize(config, .{}, stdout);
+    // try bw.flush();
 
     errdefer |err| if (err == error.SdlError) std.log.err("SDL error: {s}", .{c.SDL_GetError()});
 
@@ -75,7 +85,7 @@ pub fn main() !void {
     const font: *c.TTF_Font = try errify(c.TTF_OpenFont("res/KacstPoster.ttf", 100));
     defer c.TTF_CloseFont(font);
 
-    const surface = try errify(c.TTF_RenderText_Solid(font, bismi_allah, bismi_allah.len, config.text_color));
+    const surface = try errify(c.TTF_RenderText_Solid(font, @ptrCast(bismi_allah), bismi_allah.len, config.text_color));
     defer c.SDL_DestroySurface(surface);
 
     const texture = try errify(c.SDL_CreateTextureFromSurface(renderer, surface));
