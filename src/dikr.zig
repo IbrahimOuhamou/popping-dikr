@@ -16,17 +16,17 @@ const c = @cImport({
 const screen_h: u16 = 0;
 const screen_w: u16 = 0;
 
-const config_zon =
-    \\.{
-    \\  .font_size = 80,
-    \\
-    \\  .bg_color = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
-    \\  .text_color = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
-    \\
-    \\  .sleep_time_minutes = 16,
-    \\  .display_time_seconds = 5,
-    \\}
-;
+// const config_zon =
+//     \\.{
+//     \\  .font_size = 80,
+//     \\
+//     \\  .bg_color = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+//     \\  .text_color = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
+//     \\
+//     \\  .sleep_time_minutes = 16,
+//     \\  .display_time_seconds = 5,
+//     \\}
+// ;
 const adkar = [_][:0]u8{
     @constCast("ﻥﺎﻤﺣﺮﻟﺍ"),
     @constCast("ﻥﺎﻤﺣﺮﻟﺍ"),
@@ -42,18 +42,55 @@ const Config = struct {
     display_time_seconds: u16 = 5,
 };
 
-var config: Config = undefined;
+var config: Config = Config{};
 
 pub fn main() !void {
-    config = try std.zon.parse.fromSlice(Config, std.heap.c_allocator, config_zon, null, .{ .ignore_unknown_fields = true });
     var bismi_allah: []u8 = undefined;
     bismi_allah = adkar[adkar.len - 1];
 
-    // const stdout_file = std.io.getStdOut().writer();
-    // var bw = std.io.bufferedWriter(stdout_file);
-    // const stdout = bw.writer();
-    // try std.zon.stringify.serialize(config, .{}, stdout);
-    // try bw.flush();
+    // config = try std.zon.parse.fromSlice(Config, std.heap.c_allocator, config_zon, null, .{ .ignore_unknown_fields = true });
+    // var allocator = std.heap.c_allocator;
+    var allocator = std.heap.c_allocator;
+
+    const app_data_dir_path_optional = get_data_dir: {
+        if (std.fs.getAppDataDir(allocator, "popping-dikr")) |add| break :get_data_dir add else |err| switch (err) {
+            std.fs.GetAppDataDirError.AppDataDirUnavailable => std.log.err("Error opening App data dir: 'AppDataDirUnavailable'\n", .{}),
+            else => return err,
+        }
+        break :get_data_dir null;
+    };
+    defer allocator.free(app_data_dir_path_optional.?);
+
+    if (app_data_dir_path_optional) |app_data_dir_path| blk: {
+        const app_data_dir = std.fs.openDirAbsolute(app_data_dir_path, .{}) catch |err| {
+            std.log.err("Error opening App data dir: '{any}'\n", .{err});
+            break :blk;
+        };
+
+        const settings_file = app_data_dir.openFile("settings.zon", .{}) catch |err| {
+            std.log.err("Error opening settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
+            break :blk;
+        };
+
+        const stat = settings_file.stat() catch |err| stat: {
+            std.log.err("Error getting settings file stats '{s}': '{any}'", .{ app_data_dir_path, err });
+            break :stat null;
+        };
+
+        const settings_file_content = settings_file.readToEndAllocOptions(allocator, 1024 * 1024, if (stat) |_| stat.?.size else null, @alignOf(u8), 0) catch |err| {
+            std.log.err("Error reading settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
+            break :blk;
+        };
+        defer allocator.free(settings_file_content);
+
+        var zon_parse_status: std.zon.parse.Status = .{};
+        config = std.zon.parse.fromSlice(Config, allocator, settings_file_content, &zon_parse_status, .{ .ignore_unknown_fields = true }) catch |err| switch (err) {
+            else => {
+                std.log.err("Error reading settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
+                break :blk;
+            },
+        };
+    }
 
     errdefer |err| if (err == error.SdlError) std.log.err("SDL error: {s}", .{c.SDL_GetError()});
 
