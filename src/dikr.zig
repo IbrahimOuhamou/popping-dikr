@@ -28,8 +28,12 @@ const screen_w: u16 = 0;
 //     \\}
 // ;
 const adkar = [_][:0]u8{
-    @constCast("ﻥﺎﻤﺣﺮﻟﺍ"),
-    @constCast("ﻥﺎﻤﺣﺮﻟﺍ"),
+    @constCast("\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D} \u{FEE2}\u{FEB4}\u{FE91}"),
+    @constCast("\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D} \u{FEE6}\u{FEA4}\u{FE92}\u{FEB3}"),
+    @constCast("\u{FEAA}\u{FEE4}\u{FEA4}\u{FEE3} \u{FEF0}\u{FEE0}\u{FECB} \u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D} \u{FEF0}\u{FEE0}\u{FEBB}"),
+    @constCast("\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D} \u{FEAE}\u{FED4}\u{FED0}\u{FE98}\u{FEB3}أ"),
+    @constCast("\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D} ﻻإ \u{FEEA}\u{FEDF}إ ﻻ"),
+    @constCast("\u{FEAE}\u{FE92}\u{FEDB}أ }\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D}"),
 };
 
 const Config = struct {
@@ -46,7 +50,7 @@ var config: Config = Config{};
 
 pub fn main() !void {
     var bismi_allah: []u8 = undefined;
-    bismi_allah = adkar[adkar.len - 1];
+    bismi_allah = adkar[0];
 
     // config = try std.zon.parse.fromSlice(Config, std.heap.c_allocator, config_zon, null, .{ .ignore_unknown_fields = true });
     // var allocator = std.heap.c_allocator;
