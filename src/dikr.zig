@@ -18,7 +18,8 @@ const screen_w: u16 = 0;
 
 // const config_zon =
 //     \\.{
-//     \\  .font_size = 80,
+//     \\  .screen_h: u16 = 100,
+//     \\  .screen_w: u16 = 400,
 //     \\
 //     \\  .bg_color = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
 //     \\  .text_color = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
@@ -36,8 +37,16 @@ const adkar = [_][:0]u8{
     @constCast("\u{FEAE}\u{FE92}\u{FEDB}أ }\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D}"),
 };
 
+const WindowType = enum {
+    fixed_width,
+    follow_height,
+};
+
 const Config = struct {
-    font_size: u8 = 80,
+    window_type: WindowType = .fixed_width,
+
+    window_h: u16 = 100,
+    window_w: u16 = 400,
 
     bg_color: c.SDL_Color = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
     text_color: c.SDL_Color = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
@@ -50,7 +59,7 @@ var config: Config = Config{};
 
 pub fn main() !void {
     var bismi_allah: []u8 = undefined;
-    bismi_allah = adkar[0];
+    bismi_allah = adkar[1];
 
     // config = try std.zon.parse.fromSlice(Config, std.heap.c_allocator, config_zon, null, .{ .ignore_unknown_fields = true });
     // var allocator = std.heap.c_allocator;
@@ -90,7 +99,11 @@ pub fn main() !void {
         var zon_parse_status: std.zon.parse.Status = .{};
         config = std.zon.parse.fromSlice(Config, allocator, settings_file_content, &zon_parse_status, .{ .ignore_unknown_fields = true }) catch |err| switch (err) {
             else => {
-                std.log.err("Error reading settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
+                std.log.err("Error reading settings file in '{s}': '{any}'", .{ app_data_dir_path, err });
+                var err_it = zon_parse_status.iterateErrors();
+                while (err_it.next()) |zon_err| {
+                    std.log.err("{s}\n{any}", .{zon_err.fmtMessage(&zon_parse_status), zon_err.getLocation(&zon_parse_status)});
+                }
                 break :blk;
             },
         };
@@ -115,13 +128,14 @@ pub fn main() !void {
     const window: *c.SDL_Window, const renderer: *c.SDL_Renderer = create_window_and_renderer: {
         var window: ?*c.SDL_Window = null;
         var renderer: ?*c.SDL_Renderer = null;
-        try errify(c.SDL_CreateWindowAndRenderer("popping dikr", @intCast(config.font_size * bismi_allah.len), config.font_size, 0, &window, &renderer));
+        try errify(c.SDL_CreateWindowAndRenderer("popping dikr", config.window_w, config.window_h, c.SDL_WINDOW_ALWAYS_ON_TOP | c.SDL_WINDOW_BORDERLESS, &window, &renderer));
         errdefer comptime unreachable;
 
         break :create_window_and_renderer .{ window.?, renderer.? };
     };
     defer c.SDL_DestroyRenderer(renderer);
     defer c.SDL_DestroyWindow(window);
+
 
     const font: *c.TTF_Font = try errify(c.TTF_OpenFont("res/KacstPoster.ttf", 100));
     defer c.TTF_CloseFont(font);
@@ -130,8 +144,6 @@ pub fn main() !void {
     defer c.SDL_DestroySurface(surface);
 
     const texture = try errify(c.SDL_CreateTextureFromSurface(renderer, surface));
-
-    const destination_rect = c.SDL_FRect{ .w = @floatFromInt(config.font_size * bismi_allah.len), .h = @floatFromInt(config.font_size), .x = 0, .y = 0 };
 
     main_loop: while (true) {
 
@@ -161,7 +173,7 @@ pub fn main() !void {
 
             // try errify(c.SDL_SetRenderScale(renderer, 2, 2));
 
-            try errify(c.SDL_RenderTexture(renderer, texture, null, &destination_rect));
+            try errify(c.SDL_RenderTexture(renderer, texture, null, null));
 
             try errify(c.SDL_RenderPresent(renderer));
         }
@@ -170,6 +182,7 @@ pub fn main() !void {
 
 /// Converts the return value of an SDL function to an error union.
 inline fn errify(value: anytype) error{SdlError}!switch (@typeInfo(@TypeOf(value))) {
+
     .bool => void,
     .pointer, .optional => @TypeOf(value.?),
     .int => |info| switch (info.signedness) {
@@ -178,6 +191,8 @@ inline fn errify(value: anytype) error{SdlError}!switch (@typeInfo(@TypeOf(value
     },
     else => @compileError("unerrifiable type: " ++ @typeName(@TypeOf(value))),
 } {
+    errdefer std.log.err("{s}", .{c.SDL_GetError()});
+    
     return switch (@typeInfo(@TypeOf(value))) {
         .bool => if (!value) error.SdlError,
         .pointer, .optional => value orelse error.SdlError,
