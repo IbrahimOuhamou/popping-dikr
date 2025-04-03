@@ -13,8 +13,7 @@ const c = @cImport({
     @cInclude("SDL3_ttf/SDL_ttf.h");
 });
 
-const screen_h: u16 = 0;
-const screen_w: u16 = 0;
+const font_data = @embedFile("KacstPoster.ttf");
 
 // const config_zon =
 //     \\.{
@@ -53,6 +52,8 @@ const Config = struct {
 
     sleep_time_minutes: u16 = 16,
     display_time_seconds: u16 = 5,
+
+    font_path: ?[:0]const u8 = null,
 };
 
 var config: Config = Config{};
@@ -137,7 +138,13 @@ pub fn main() !void {
     defer c.SDL_DestroyWindow(window);
 
 
-    const font: *c.TTF_Font = try errify(c.TTF_OpenFont("res/KacstPoster.ttf", 100));
+    const font: *c.TTF_Font = open_font: {
+        if(config.font_path) |path| blk: {
+            break :open_font errify(c.TTF_OpenFont(path, 100)) catch break :blk;
+        }
+        const io: *c.SDL_IOStream = try errify(c.SDL_IOFromConstMem(font_data.ptr, font_data.len));
+        break :open_font try errify(c.TTF_OpenFontIO(io, true, 100));
+    };
     defer c.TTF_CloseFont(font);
 
     const surface = try errify(c.TTF_RenderText_Solid(font, @ptrCast(bismi_allah), bismi_allah.len, config.text_color));
