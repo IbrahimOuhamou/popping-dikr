@@ -60,7 +60,7 @@ var config: Config = Config{};
 
 pub fn main() !void {
     var bismi_allah: []u8 = undefined;
-    bismi_allah = adkar[1];
+    bismi_allah = adkar[2];
 
     // config = try std.zon.parse.fromSlice(Config, std.heap.c_allocator, config_zon, null, .{ .ignore_unknown_fields = true });
     // var allocator = std.heap.c_allocator;
@@ -129,7 +129,7 @@ pub fn main() !void {
     const window: *c.SDL_Window, const renderer: *c.SDL_Renderer = create_window_and_renderer: {
         var window: ?*c.SDL_Window = null;
         var renderer: ?*c.SDL_Renderer = null;
-        try errify(c.SDL_CreateWindowAndRenderer("popping dikr", config.window_w, config.window_h, c.SDL_WINDOW_ALWAYS_ON_TOP | c.SDL_WINDOW_BORDERLESS, &window, &renderer));
+        try errify(c.SDL_CreateWindowAndRenderer("popping dikr", switch (config.window_type) { .fixed_width => config.window_w, .follow_height => (config.window_h / 6 * @as(c_int, @intCast(bismi_allah.len))) }, config.window_h, c.SDL_WINDOW_ALWAYS_ON_TOP | c.SDL_WINDOW_BORDERLESS, &window, &renderer));
         errdefer comptime unreachable;
 
         break :create_window_and_renderer .{ window.?, renderer.? };
