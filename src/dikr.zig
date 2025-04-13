@@ -2,31 +2,12 @@
 // la ilaha illa Allah Mohammed Rassoul Allah
 
 const std = @import("std");
-const c = @cImport({
-    @cDefine("SDL_DISABLE_OLD_NAMES", {});
-    @cInclude("SDL3/SDL.h");
-    @cInclude("SDL3/SDL_revision.h");
-    // For programs that provide their own entry points instead of relying on SDL's main function
-    // macro magic, 'SDL_MAIN_HANDLED' should be defined before including 'SDL_main.h'.
-    @cDefine("SDL_MAIN_HANDLED", {});
-    @cInclude("SDL3/SDL_main.h");
-    @cInclude("SDL3_ttf/SDL_ttf.h");
-});
+const c = @import("c.zig").c;
 
 const font_data = @embedFile("KacstPoster.ttf");
 
-// const config_zon =
-//     \\.{
-//     \\  .screen_h: u16 = 100,
-//     \\  .screen_w: u16 = 400,
-//     \\
-//     \\  .bg_color = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
-//     \\  .text_color = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
-//     \\
-//     \\  .sleep_time_minutes = 16,
-//     \\  .display_time_seconds = 5,
-//     \\}
-// ;
+const Config = @import("config.zig");
+
 const adkar = [_][:0]u8{
     @constCast("\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D} \u{FEE2}\u{FEB4}\u{FE91}"),
     @constCast("\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D} \u{FEE6}\u{FEA4}\u{FE92}\u{FEB3}"),
@@ -36,27 +17,6 @@ const adkar = [_][:0]u8{
     @constCast("\u{FEAE}\u{FE92}\u{FEDB}أ }\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D}"),
 };
 
-const WindowType = enum {
-    fixed_width,
-    follow_height,
-};
-
-const Config = struct {
-    window_type: WindowType = .fixed_width,
-
-    window_h: u16 = 100,
-    window_w: u16 = 400,
-
-    bg_color: c.SDL_Color = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
-    text_color: c.SDL_Color = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
-
-    sleep_time_minutes: u16 = 16,
-    display_time_seconds: u16 = 5,
-
-    font_path: ?[:0]const u8 = null,
-};
-
-var config: Config = Config{};
 
 pub fn main() !void {
     var bismi_allah: []u8 = undefined;
@@ -64,51 +24,9 @@ pub fn main() !void {
 
     // config = try std.zon.parse.fromSlice(Config, std.heap.c_allocator, config_zon, null, .{ .ignore_unknown_fields = true });
     // var allocator = std.heap.c_allocator;
-    var allocator = std.heap.c_allocator;
+    const allocator = std.heap.c_allocator;
 
-    const app_data_dir_path_optional = get_data_dir: {
-        if (std.fs.getAppDataDir(allocator, "popping-dikr")) |add| break :get_data_dir add else |err| switch (err) {
-            std.fs.GetAppDataDirError.AppDataDirUnavailable => std.log.err("Error opening App data dir: 'AppDataDirUnavailable'\n", .{}),
-            else => return err,
-        }
-        break :get_data_dir null;
-    };
-    defer allocator.free(app_data_dir_path_optional.?);
-
-    if (app_data_dir_path_optional) |app_data_dir_path| blk: {
-        const app_data_dir = std.fs.openDirAbsolute(app_data_dir_path, .{}) catch |err| {
-            std.log.err("Error opening App data dir: '{any}'\n", .{err});
-            break :blk;
-        };
-
-        const settings_file = app_data_dir.openFile("settings.zon", .{}) catch |err| {
-            std.log.err("Error opening settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
-            break :blk;
-        };
-
-        const stat = settings_file.stat() catch |err| stat: {
-            std.log.err("Error getting settings file stats '{s}': '{any}'", .{ app_data_dir_path, err });
-            break :stat null;
-        };
-
-        const settings_file_content = settings_file.readToEndAllocOptions(allocator, 1024 * 1024, if (stat) |_| stat.?.size else null, @alignOf(u8), 0) catch |err| {
-            std.log.err("Error reading settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
-            break :blk;
-        };
-        defer allocator.free(settings_file_content);
-
-        var zon_parse_status: std.zon.parse.Status = .{};
-        config = std.zon.parse.fromSlice(Config, allocator, settings_file_content, &zon_parse_status, .{ .ignore_unknown_fields = true }) catch |err| switch (err) {
-            else => {
-                std.log.err("Error reading settings file in '{s}': '{any}'", .{ app_data_dir_path, err });
-                var err_it = zon_parse_status.iterateErrors();
-                while (err_it.next()) |zon_err| {
-                    std.log.err("{s}\n{any}", .{zon_err.fmtMessage(&zon_parse_status), zon_err.getLocation(&zon_parse_status)});
-                }
-                break :blk;
-            },
-        };
-    }
+    const config = Config.loadConfig(allocator);
     const window_width = switch (config.window_type) { .fixed_width => config.window_w, .follow_height => (config.window_h / 6 * @as(c_int, @intCast(bismi_allah.len))) };
 
     errdefer |err| if (err == error.SdlError) std.log.err("SDL error: {s}", .{c.SDL_GetError()});
