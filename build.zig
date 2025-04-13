@@ -12,6 +12,8 @@ pub fn build(b: *std.Build) void {
     });
     const sdl_lib = sdl_dep.artifact("SDL3");
 
+    const dvui_dep = b.dependency("dvui", .{ .target = target, .optimize = optimize, .backend = .sdl, .sdl3 = true });
+
     // SDL_ttf Dependency
     const sdl_ttf_dep = b.dependency("sdl_ttf", .{
         .target = target,
@@ -25,8 +27,9 @@ pub fn build(b: *std.Build) void {
     dikr_exe.linkLibrary(sdl_ttf_lib);
 
     const settings_exe_mod = b.createModule(.{ .root_source_file = b.path("src/settings.zig"), .target = target, .optimize = optimize });
+    settings_exe_mod.addImport("dvui", dvui_dep.module("dvui_sdl"));
+
     const settings_exe = b.addExecutable(.{ .name = "popping-dikr-settings", .root_module = settings_exe_mod });
-    settings_exe.linkLibrary(sdl_lib);
 
     b.installArtifact(dikr_exe);
     b.installArtifact(settings_exe);

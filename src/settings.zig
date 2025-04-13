@@ -1,94 +1,88 @@
 // بسم الله الرحمن الرحيم
 // la ilaha illa Allah Mohammed Rassoul Allah
-
 const std = @import("std");
-const c = @cImport({
-    @cDefine("SDL_DISABLE_OLD_NAMES", {});
-    @cInclude("SDL3/SDL.h");
-    @cInclude("SDL3/SDL_revision.h");
-    // For programs that provide their own entry points instead of relying on SDL's main function
-    // macro magic, 'SDL_MAIN_HANDLED' should be defined before including 'SDL_main.h'.
-    @cDefine("SDL_MAIN_HANDLED", {});
-    @cInclude("SDL3/SDL_main.h");
-});
+const builtin = @import("builtin");
+const dvui = @import("dvui");
 
-pub fn main() !void {
-    errdefer |err| if (err == error.SdlError) std.log.err("SDL error: {s}", .{c.SDL_GetError()});
+const window_icon_png = @embedFile("zig-favicon.png");
 
-    // For programs that provide their own entry points instead of relying on SDL's main function
-    // macro magic, 'SDL_SetMainReady' should be called before calling 'SDL_Init'.
-    c.SDL_SetMainReady();
+// To be a dvui App:
+// * declare "dvui_app"
+// * expose the backend's main function
+// * use the backend's log function
+pub const dvui_app: dvui.App = .{
+    .config = .{ .options = .{
+        .size = .{ .w = 800.0, .h = 600.0 },
+        .min_size = .{ .w = 250.0, .h = 350.0 },
+        .title = "popping dikr settings",
+        .icon = window_icon_png,
+    } },
+    .frameFn = AppFrame,
+    .initFn = AppInit,
+    .deinitFn = AppDeinit,
+};
+pub const main = dvui.App.main;
+pub const std_options: std.Options = .{
+    .logFn = dvui.App.logFn,
+};
 
-    try errify(c.SDL_SetAppMetadata("popping-dikr", "0.0.0", "dikr.popping-dikr.muslimDevCommunity"));
+var gpa_instance = std.heap.GeneralPurposeAllocator(.{}){};
+const gpa = gpa_instance.allocator();
 
-    try errify(c.SDL_Init(c.SDL_INIT_VIDEO));
-    defer c.SDL_Quit();
-
-    const window_w = 640;
-    const window_h = 480;
-    errify(c.SDL_SetHint(c.SDL_HINT_RENDER_VSYNC, "1")) catch {};
-
-    const window: *c.SDL_Window, const renderer: *c.SDL_Renderer = create_window_and_renderer: {
-        var window: ?*c.SDL_Window = null;
-        var renderer: ?*c.SDL_Renderer = null;
-        try errify(c.SDL_CreateWindowAndRenderer("popping dikr", window_w, window_h, 0, &window, &renderer));
-        errdefer comptime unreachable;
-
-        break :create_window_and_renderer .{ window.?, renderer.? };
-    };
-    defer c.SDL_DestroyRenderer(renderer);
-    defer c.SDL_DestroyWindow(window);
-
-    main_loop: while (true) {
-
-        // Process SDL events
-        {
-            var event: c.SDL_Event = undefined;
-            while (c.SDL_PollEvent(&event)) {
-                switch (event.type) {
-                    c.SDL_EVENT_QUIT => {
-                        break :main_loop;
-                    },
-                    c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
-                        switch (event.button.button) {
-                            c.SDL_BUTTON_LEFT => {},
-                            else => {},
-                        }
-                    },
-                    else => {},
-                }
-            }
-        }
-        // Draw
-        {
-            try errify(c.SDL_SetRenderDrawColor(renderer, 0x47, 0x5b, 0x8d, 0xff));
-
-            try errify(c.SDL_RenderClear(renderer));
-
-            try errify(c.SDL_SetRenderScale(renderer, 2, 2));
-
-            try errify(c.SDL_RenderPresent(renderer));
-        }
-    }
+// Runs before the first frame, after backend and dvui.Window.init()
+pub fn AppInit(win: *dvui.Window) void {
+    _ = win;
 }
 
-/// Converts the return value of an SDL function to an error union.
-inline fn errify(value: anytype) error{SdlError}!switch (@typeInfo(@TypeOf(value))) {
-    .bool => void,
-    .pointer, .optional => @TypeOf(value.?),
-    .int => |info| switch (info.signedness) {
-        .signed => @TypeOf(@max(0, value)),
-        .unsigned => @TypeOf(value),
-    },
-    else => @compileError("unerrifiable type: " ++ @typeName(@TypeOf(value))),
-} {
-    return switch (@typeInfo(@TypeOf(value))) {
-        .bool => if (!value) error.SdlError,
-        .pointer, .optional => value orelse error.SdlError,
-        .int => |info| switch (info.signedness) {
-            .signed => if (value >= 0) @max(0, value) else error.SdlError,
-            .unsigned => if (value != 0) value else error.SdlError,
-        },
-        else => comptime unreachable,
+// Run as app is shutting down before dvui.Window.deinit()
+pub fn AppDeinit() void {}
+
+// Run each frame to do normal UI
+pub fn AppFrame() dvui.App.Result {
+    frame() catch |err| {
+        std.log.err("in frame: {!}", .{err});
+        return .close;
     };
+    return .ok;
+}
+
+pub fn frame() !void {
+    var scroll = try dvui.scrollArea(@src(), .{}, .{ .expand = .both, .color_fill = .{ .name = .fill_window } });
+    defer scroll.deinit();
+
+    var tl = try dvui.textLayout(@src(), .{}, .{ .expand = .horizontal, .font_style = .title_4 });
+    const lorem = "This is a dvui.App example that can compile on multiple backends.";
+    try tl.addText(lorem, .{});
+    try tl.addText("\n\n", .{});
+    try tl.format("Current backend {s} : {s}", .{ @tagName(dvui.backend.kind), dvui.backend.description() }, .{});
+    tl.deinit();
+
+    var tl2 = try dvui.textLayout(@src(), .{}, .{ .expand = .horizontal });
+    try tl2.addText(
+        \\DVUI
+        \\- paints the entire window
+        \\- can show floating windows and dialogs
+        \\- rest of the window is a scroll area
+    , .{});
+    try tl2.addText("\n\n", .{});
+    try tl2.addText("Framerate is variable and adjusts as needed for input events and animations.", .{});
+    try tl2.addText("\n\n", .{});
+    try tl2.addText("Framerate is capped by vsync.", .{});
+    try tl2.addText("\n\n", .{});
+    try tl2.addText("Cursor is always being set by dvui.", .{});
+    try tl2.addText("\n\n", .{});
+    if (dvui.useFreeType) {
+        try tl2.addText("Fonts are being rendered by FreeType 2.", .{});
+    } else {
+        try tl2.addText("Fonts are being rendered by stb_truetype.", .{});
+    }
+    tl2.deinit();
+
+    const label = if (dvui.Examples.show_demo_window) "Hide Demo Window" else "Show Demo Window";
+    if (try dvui.button(@src(), label, .{}, .{})) {
+        dvui.Examples.show_demo_window = !dvui.Examples.show_demo_window;
+    }
+
+    // look at demo() for examples of dvui widgets, shows in a floating window
+    try dvui.Examples.demo();
 }

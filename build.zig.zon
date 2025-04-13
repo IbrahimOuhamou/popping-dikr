@@ -44,6 +44,10 @@
             .url = "git+https://github.com/boubl/SDL_ttf.git#e825cdf18bb3aa50ac0e208589963a3a22cddb42",
             .hash = "sdl_ttf-3.2.0-GgzNnYkKBwAThbqYkz3LyGH7QuL7vT74uoKiHXPOdeQ9",
         },
+        .dvui = .{
+            .url = "git+https://github.com/IbrahimOuhamou/dvui-fork?ref=subhana-allah-alt-deps#4b681faa08e81778e6ba5f08d2603eedbd68e3bc",
+            .hash = "dvui-0.2.0-AQFJma0gzADNrx7QWe0kwwLzCLVR9MfITm2VTi-7CL7S",
+        },
     },
     .paths = .{
         "build.zig",
