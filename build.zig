@@ -30,6 +30,8 @@ pub fn build(b: *std.Build) void {
     settings_exe_mod.addImport("dvui", dvui_dep.module("dvui_sdl"));
 
     const settings_exe = b.addExecutable(.{ .name = "popping-dikr-settings", .root_module = settings_exe_mod });
+    settings_exe.linkLibrary(sdl_lib);
+    settings_exe.linkLibrary(sdl_ttf_lib);
 
     b.installArtifact(dikr_exe);
     b.installArtifact(settings_exe);

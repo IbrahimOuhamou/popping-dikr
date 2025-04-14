@@ -6,6 +6,9 @@ const dvui = @import("dvui");
 
 const window_icon_png = @embedFile("zig-favicon.png");
 
+const Config = @import("config.zig");
+var config: Config = undefined;
+
 // To be a dvui App:
 // * declare "dvui_app"
 // * expose the backend's main function
@@ -32,6 +35,8 @@ const gpa = gpa_instance.allocator();
 // Runs before the first frame, after backend and dvui.Window.init()
 pub fn AppInit(win: *dvui.Window) void {
     _ = win;
+
+    config = Config.loadConfig(gpa);
 }
 
 // Run as app is shutting down before dvui.Window.deinit()
@@ -49,40 +54,63 @@ pub fn AppFrame() dvui.App.Result {
 pub fn frame() !void {
     var scroll = try dvui.scrollArea(@src(), .{}, .{ .expand = .both, .color_fill = .{ .name = .fill_window } });
     defer scroll.deinit();
+    
+    try dvui.label(@src(), "popping dikr settings", .{}, .{ .expand = .horizontal, .font_style = .title_1 });
+    const col = dvui.Color.average(dvui.themeGet().color_text, dvui.themeGet().color_fill);
+    try dvui.label(@src(), "adjust the application settings", .{}, .{ .color_text = .{ .color = col } , .font_style = .caption_heading });
 
-    var tl = try dvui.textLayout(@src(), .{}, .{ .expand = .horizontal, .font_style = .title_4 });
-    const lorem = "This is a dvui.App example that can compile on multiple backends.";
-    try tl.addText(lorem, .{});
-    try tl.addText("\n\n", .{});
-    try tl.format("Current backend {s} : {s}", .{ @tagName(dvui.backend.kind), dvui.backend.description() }, .{});
-    tl.deinit();
+    // Tabs
+    {
+        const Data = struct {
+            const Tabs = enum {
+                window,
+                colors,
+                timing,
+                font,
+            };
+            var tab: Tabs = .window;
+        };
 
-    var tl2 = try dvui.textLayout(@src(), .{}, .{ .expand = .horizontal });
-    try tl2.addText(
-        \\DVUI
-        \\- paints the entire window
-        \\- can show floating windows and dialogs
-        \\- rest of the window is a scroll area
-    , .{});
-    try tl2.addText("\n\n", .{});
-    try tl2.addText("Framerate is variable and adjusts as needed for input events and animations.", .{});
-    try tl2.addText("\n\n", .{});
-    try tl2.addText("Framerate is capped by vsync.", .{});
-    try tl2.addText("\n\n", .{});
-    try tl2.addText("Cursor is always being set by dvui.", .{});
-    try tl2.addText("\n\n", .{});
-    if (dvui.useFreeType) {
-        try tl2.addText("Fonts are being rendered by FreeType 2.", .{});
-    } else {
-        try tl2.addText("Fonts are being rendered by stb_truetype.", .{});
+        var tbox = try dvui.box(@src(), .vertical, .{ .expand = .horizontal });
+        defer tbox.deinit();
+
+        {
+            var tabs = dvui.TabsWidget.init(@src(), .{ .dir = .horizontal }, .{ .expand = .horizontal });
+            try tabs.install();
+            defer tabs.deinit();
+
+            inline for (@typeInfo(Data.Tabs).@"enum".fields) |field| {
+                var tab = try tabs.addTab(Data.tab == @as(Data.Tabs, @enumFromInt(field.value)), .{});
+                defer tab.deinit();
+                try dvui.label(@src(), field.name, .{}, .{});
+
+                if (tab.clicked()) {
+                    Data.tab = @as(Data.Tabs, @enumFromInt(field.value));
+                }
+            }
+        }
+
+        {
+            var border = dvui.Rect.all(1);
+            border.y = 0;
+            var vbox3 = try dvui.box(@src(), .vertical, .{ .expand = .both, .background = true, .color_fill = .{ .name = .fill_window }, .border = border });
+            defer vbox3.deinit();
+
+            switch (Data.tab) {
+                .window => {
+                    try dvui.label(@src(), "Alhamdo li Allah window stuff", .{}, .{ .expand = .both, .gravity_x = 0.5, .gravity_y = 0.5 });
+                },
+                .colors => {
+                    try dvui.label(@src(), "Alhamdo li Allah colors stuff", .{}, .{ .expand = .both, .gravity_x = 0.5, .gravity_y = 0.5 });
+                },
+                .timing => {
+                    try dvui.label(@src(), "Alhamdo li Allah timing stuff", .{}, .{ .expand = .both, .gravity_x = 0.5, .gravity_y = 0.5 });
+                },
+                .font => {
+                    try dvui.label(@src(), "Alhamdo li Allah font stuff", .{}, .{ .expand = .both, .gravity_x = 0.5, .gravity_y = 0.5 });
+                },
+            }
+        }
     }
-    tl2.deinit();
-
-    const label = if (dvui.Examples.show_demo_window) "Hide Demo Window" else "Show Demo Window";
-    if (try dvui.button(@src(), label, .{}, .{})) {
-        dvui.Examples.show_demo_window = !dvui.Examples.show_demo_window;
-    }
-
-    // look at demo() for examples of dvui widgets, shows in a floating window
-    try dvui.Examples.demo();
 }
+
