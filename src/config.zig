@@ -52,11 +52,13 @@ pub fn loadConfig(allocator: std.mem.Allocator) Config {
             std.log.err("Error opening App data dir: '{any}'\n", .{err});
             break :blk;
         };
+        defer @constCast(&app_data_dir).close();
 
         const settings_file = app_data_dir.openFile("settings.zon", .{}) catch |err| {
             std.log.err("Error opening settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
             break :blk;
         };
+        defer @constCast(&settings_file).close();
 
         const stat = settings_file.stat() catch |err| stat: {
             std.log.err("Error getting settings file stats '{s}': '{any}'", .{ app_data_dir_path, err });
@@ -83,5 +85,23 @@ pub fn loadConfig(allocator: std.mem.Allocator) Config {
     }
 
     return Config{};
+}
+
+/// save to app data dir
+pub fn saveConfig(allocator: std.mem.Allocator, config: Config) !?[]u8 {
+    const app_data_dir_path = std.fs.getAppDataDir(allocator, "popping-dikr") catch |err| return try std.fmt.allocPrint(allocator, "Error opening App data dir: '{any}'\n", .{err});
+    defer allocator.free(app_data_dir_path);
+
+    const app_data_dir = std.fs.openDirAbsolute(app_data_dir_path, .{}) catch |err| return try std.fmt.allocPrint(allocator, "Error opening App data dir: '{any}'\n", .{err});
+    defer @constCast(&app_data_dir).close();
+
+    
+
+    const settings_file = app_data_dir.createFile("settings.zon", .{ .read = true } ) catch |err| return try std.fmt.allocPrint(allocator, "Error opening settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
+    defer @constCast(&settings_file).close();
+
+    std.zon.stringify.serialize(config, .{}, settings_file.writer()) catch |err| return try std.fmt.allocPrint(allocator, "Error writing to settings file in '{s}': '{any}'\n", .{ app_data_dir_path, err });
+
+    return null;
 }
 
