@@ -62,6 +62,8 @@ pub fn main() !void {
         defer c.SDL_DestroyRenderer(renderer);
         defer c.SDL_DestroyWindow(window);
 
+        const shown_at = std.time.timestamp();
+
         {
             const display_id = try errify(c.SDL_GetDisplayForWindow(window));
             const dm: *c.SDL_DisplayMode = @ptrCast(@constCast(try errify(c.SDL_GetCurrentDisplayMode(display_id))));
@@ -106,6 +108,8 @@ pub fn main() !void {
                         else => {},
                     }
                 }
+
+                if (std.time.timestamp() >= shown_at + config.display_time_seconds) break :window_loop;
             }
             // Draw
             {
