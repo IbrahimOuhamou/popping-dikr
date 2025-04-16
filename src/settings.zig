@@ -74,7 +74,10 @@ pub fn AppInit(win: *dvui.Window) void {
     Data.bg_color.g = config.bg_color.g;
     Data.bg_color.b = config.bg_color.b;
 
-    if (config.font_path) |font_path| @memcpy(Data.font_path_buffer[0..font_path.len], font_path);
+    if (config.font_path) |font_path| {
+        @memcpy(Data.font_path_buffer[0..font_path.len], font_path);
+        Data.font_path = Data.font_path_buffer[0..font_path.len];
+    }
 }
 
 // Run as app is shutting down before dvui.Window.deinit()
