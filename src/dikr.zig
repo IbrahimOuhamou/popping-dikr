@@ -47,73 +47,77 @@ pub fn main() !void {
 
     errify(c.SDL_SetHint(c.SDL_HINT_RENDER_VSYNC, "1")) catch {};
 
-    const window: *c.SDL_Window, const renderer: *c.SDL_Renderer = create_window_and_renderer: {
-        var window: ?*c.SDL_Window = null;
-        var renderer: ?*c.SDL_Renderer = null;
-        try errify(c.SDL_CreateWindowAndRenderer("popping dikr", window_width, config.window_h, c.SDL_WINDOW_ALWAYS_ON_TOP | c.SDL_WINDOW_BORDERLESS, &window, &renderer));
-        errdefer comptime unreachable;
+    while (true) {
+        defer std.Thread.sleep(@as(usize, config.sleep_time_minutes) * 1_000_000_000 * 60);
 
-        break :create_window_and_renderer .{ window.?, renderer.? };
-    };
-    defer c.SDL_DestroyRenderer(renderer);
-    defer c.SDL_DestroyWindow(window);
+        const window: *c.SDL_Window, const renderer: *c.SDL_Renderer = create_window_and_renderer: {
+            var window: ?*c.SDL_Window = null;
+            var renderer: ?*c.SDL_Renderer = null;
+            try errify(c.SDL_CreateWindowAndRenderer("popping dikr", window_width, config.window_h, c.SDL_WINDOW_ALWAYS_ON_TOP | c.SDL_WINDOW_BORDERLESS, &window, &renderer));
+            errdefer comptime unreachable;
 
-    {
-        const display_id = try errify(c.SDL_GetDisplayForWindow(window));
-        const dm: *c.SDL_DisplayMode = @ptrCast(@constCast(try errify(c.SDL_GetCurrentDisplayMode(display_id))));
-        // defer allocator.free(dm);
+            break :create_window_and_renderer .{ window.?, renderer.? };
+        };
+        defer c.SDL_DestroyRenderer(renderer);
+        defer c.SDL_DestroyWindow(window);
 
-        var x: c_int = undefined;
-        var y: c_int = undefined;
-
-        _ = try errify(c.SDL_GetWindowPosition(window, &x, &y));
-        std.debug.print("alhamdo li Allah window pose (before change) : {{{d}, {d}}}\n", .{ x, y });
-
-        try errify(c.SDL_SetWindowPosition(window, 12, @intFromFloat(@as(f32, @floatFromInt(dm.h)) * 0.3)));
-
-        _ = try errify(c.SDL_GetWindowPosition(window, &x, &y));
-        std.debug.print("alhamdo li Allah window pose (after change) : {{{d}, {d}}}\n", .{ x, y });
-    }
-
-    const font: *c.TTF_Font = open_font: {
-        if (config.font_path) |path| blk: {
-            break :open_font errify(c.TTF_OpenFont(path, 100)) catch break :blk;
-        }
-        const io: *c.SDL_IOStream = try errify(c.SDL_IOFromConstMem(font_data.ptr, font_data.len));
-        break :open_font try errify(c.TTF_OpenFontIO(io, true, 100));
-    };
-    defer c.TTF_CloseFont(font);
-
-    const surface = try errify(c.TTF_RenderText_Solid(font, @ptrCast(bismi_allah), bismi_allah.len, config.text_color));
-    defer c.SDL_DestroySurface(surface);
-
-    const texture = try errify(c.SDL_CreateTextureFromSurface(renderer, surface));
-
-    main_loop: while (true) {
-
-        // Process SDL events
         {
-            var event: c.SDL_Event = undefined;
-            while (c.SDL_PollEvent(&event)) {
-                switch (event.type) {
-                    c.SDL_EVENT_QUIT, c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
-                        break :main_loop;
-                    },
-                    else => {},
+            const display_id = try errify(c.SDL_GetDisplayForWindow(window));
+            const dm: *c.SDL_DisplayMode = @ptrCast(@constCast(try errify(c.SDL_GetCurrentDisplayMode(display_id))));
+            // defer allocator.free(dm);
+
+            var x: c_int = undefined;
+            var y: c_int = undefined;
+
+            _ = try errify(c.SDL_GetWindowPosition(window, &x, &y));
+            std.debug.print("alhamdo li Allah window pose (before change) : {{{d}, {d}}}\n", .{ x, y });
+
+            try errify(c.SDL_SetWindowPosition(window, 12, @intFromFloat(@as(f32, @floatFromInt(dm.h)) * 0.3)));
+
+            _ = try errify(c.SDL_GetWindowPosition(window, &x, &y));
+            std.debug.print("alhamdo li Allah window pose (after change) : {{{d}, {d}}}\n", .{ x, y });
+        }
+
+        const font: *c.TTF_Font = open_font: {
+            if (config.font_path) |path| blk: {
+                break :open_font errify(c.TTF_OpenFont(path, 100)) catch break :blk;
+            }
+            const io: *c.SDL_IOStream = try errify(c.SDL_IOFromConstMem(font_data.ptr, font_data.len));
+            break :open_font try errify(c.TTF_OpenFontIO(io, true, 100));
+        };
+        defer c.TTF_CloseFont(font);
+
+        const surface = try errify(c.TTF_RenderText_Solid(font, @ptrCast(bismi_allah), bismi_allah.len, config.text_color));
+        defer c.SDL_DestroySurface(surface);
+
+        const texture = try errify(c.SDL_CreateTextureFromSurface(renderer, surface));
+
+        window_loop: while (true) {
+
+            // Process SDL events
+            {
+                var event: c.SDL_Event = undefined;
+                while (c.SDL_PollEvent(&event)) {
+                    switch (event.type) {
+                        c.SDL_EVENT_QUIT, c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
+                            break :window_loop;
+                        },
+                        else => {},
+                    }
                 }
             }
-        }
-        // Draw
-        {
-            try errify(c.SDL_SetRenderDrawColor(renderer, config.bg_color.r, config.bg_color.g, config.bg_color.b, config.bg_color.a));
+            // Draw
+            {
+                try errify(c.SDL_SetRenderDrawColor(renderer, config.bg_color.r, config.bg_color.g, config.bg_color.b, config.bg_color.a));
 
-            try errify(c.SDL_RenderClear(renderer));
+                try errify(c.SDL_RenderClear(renderer));
 
-            // try errify(c.SDL_SetRenderScale(renderer, 2, 2));
+                // try errify(c.SDL_SetRenderScale(renderer, 2, 2));
 
-            try errify(c.SDL_RenderTexture(renderer, texture, null, null));
+                try errify(c.SDL_RenderTexture(renderer, texture, null, null));
 
-            try errify(c.SDL_RenderPresent(renderer));
+                try errify(c.SDL_RenderPresent(renderer));
+            }
         }
     }
 }

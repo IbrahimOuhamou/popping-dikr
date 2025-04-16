@@ -175,15 +175,15 @@ pub fn frame() !void {
                 },
                 .timing => {
                     {
-                        try dvui.label(@src(), "Display Time: {d} seconds", .{config.sleep_time_minutes}, .{});
-                        const result_sleep_time = try dvui.textEntryNumber(@src(), @TypeOf(config.sleep_time_minutes), .{ .value = &config.sleep_time_minutes }, .{});
-                        if (result_sleep_time.value == .Valid) config.sleep_time_minutes = result_sleep_time.value.Valid;
+                        try dvui.label(@src(), "Display Time: {d} seconds", .{config.display_time_seconds}, .{});
+                        const result_display_seconds = try dvui.textEntryNumber(@src(), @TypeOf(config.display_time_seconds), .{ .value = &config.display_time_seconds }, .{});
+                        if (result_display_seconds.value == .Valid) config.display_time_seconds = result_display_seconds.value.Valid;
                     }
 
                     {
-                        try dvui.label(@src(), "Sleep Time: {d} minutes", .{config.display_time_seconds}, .{});
-                        const result_display_seconds = try dvui.textEntryNumber(@src(), @TypeOf(config.display_time_seconds), .{ .value = &config.display_time_seconds }, .{});
-                        if (result_display_seconds.value == .Valid) config.display_time_seconds = result_display_seconds.value.Valid;
+                        try dvui.label(@src(), "Sleep Time: {d} minutes", .{config.sleep_time_minutes}, .{});
+                        const result_sleep_time = try dvui.textEntryNumber(@src(), @TypeOf(config.sleep_time_minutes), .{ .value = &config.sleep_time_minutes }, .{});
+                        if (result_sleep_time.value == .Valid) config.sleep_time_minutes = result_sleep_time.value.Valid;
                     }
                 },
                 .font => {
