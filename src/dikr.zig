@@ -18,8 +18,8 @@ const adkar = [_][:0]u8{
 };
 
 pub fn main() !void {
-    var bismi_allah: []u8 = undefined;
-    bismi_allah = adkar[2];
+    var dikr_str: []u8 = undefined;
+    dikr_str = adkar[0];
 
     // config = try std.zon.parse.fromSlice(Config, std.heap.c_allocator, config_zon, null, .{ .ignore_unknown_fields = true });
     // var allocator = std.heap.c_allocator;
@@ -28,7 +28,7 @@ pub fn main() !void {
     const config = Config.loadConfig(allocator);
     const window_width = switch (config.window_type) {
         .fixed_width => config.window_w,
-        .follow_height => (config.window_h / 6 * @as(c_int, @intCast(bismi_allah.len))),
+        .follow_height => (config.window_h / 6 * @as(c_int, @intCast(dikr_str.len))),
     };
 
     errdefer |err| if (err == error.SdlError) std.log.err("SDL error: {s}", .{c.SDL_GetError()});
@@ -49,6 +49,7 @@ pub fn main() !void {
 
     while (true) {
         defer std.Thread.sleep(@as(usize, config.sleep_time_minutes) * 1_000_000_000 * 60);
+        defer dikr_str = adkar[std.crypto.random.int(u8) % adkar.len];
 
         const window: *c.SDL_Window, const renderer: *c.SDL_Renderer = create_window_and_renderer: {
             var window: ?*c.SDL_Window = null;
@@ -87,7 +88,7 @@ pub fn main() !void {
         };
         defer c.TTF_CloseFont(font);
 
-        const surface = try errify(c.TTF_RenderText_Solid(font, @ptrCast(bismi_allah), bismi_allah.len, config.text_color));
+        const surface = try errify(c.TTF_RenderText_Solid(font, @ptrCast(dikr_str), dikr_str.len, config.text_color));
         defer c.SDL_DestroySurface(surface);
 
         const texture = try errify(c.SDL_CreateTextureFromSurface(renderer, surface));
