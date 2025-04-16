@@ -17,7 +17,6 @@ const adkar = [_][:0]u8{
     @constCast("\u{FEAE}\u{FE92}\u{FEDB}أ }\u{FEEA}\u{FEE0}\u{FEDF}\u{FE8D}"),
 };
 
-
 pub fn main() !void {
     var bismi_allah: []u8 = undefined;
     bismi_allah = adkar[2];
@@ -27,7 +26,10 @@ pub fn main() !void {
     const allocator = std.heap.c_allocator;
 
     const config = Config.loadConfig(allocator);
-    const window_width = switch (config.window_type) { .fixed_width => config.window_w, .follow_height => (config.window_h / 6 * @as(c_int, @intCast(bismi_allah.len))) };
+    const window_width = switch (config.window_type) {
+        .fixed_width => config.window_w,
+        .follow_height => (config.window_h / 6 * @as(c_int, @intCast(bismi_allah.len))),
+    };
 
     errdefer |err| if (err == error.SdlError) std.log.err("SDL error: {s}", .{c.SDL_GetError()});
 
@@ -61,20 +63,20 @@ pub fn main() !void {
         const dm: *c.SDL_DisplayMode = @ptrCast(@constCast(try errify(c.SDL_GetCurrentDisplayMode(display_id))));
         // defer allocator.free(dm);
 
-        var x : c_int = undefined;
-        var y : c_int = undefined;
+        var x: c_int = undefined;
+        var y: c_int = undefined;
 
         _ = try errify(c.SDL_GetWindowPosition(window, &x, &y));
-        std.debug.print("alhamdo li Allah window pose (before change) : {{{d}, {d}}}\n", .{x, y});
+        std.debug.print("alhamdo li Allah window pose (before change) : {{{d}, {d}}}\n", .{ x, y });
 
-        try errify(c.SDL_SetWindowPosition(window, 12, @intFromFloat(@as(f32 ,@floatFromInt(dm.h)) * 0.3)));
+        try errify(c.SDL_SetWindowPosition(window, 12, @intFromFloat(@as(f32, @floatFromInt(dm.h)) * 0.3)));
 
         _ = try errify(c.SDL_GetWindowPosition(window, &x, &y));
-        std.debug.print("alhamdo li Allah window pose (after change) : {{{d}, {d}}}\n", .{x, y});
+        std.debug.print("alhamdo li Allah window pose (after change) : {{{d}, {d}}}\n", .{ x, y });
     }
 
     const font: *c.TTF_Font = open_font: {
-        if(config.font_path) |path| blk: {
+        if (config.font_path) |path| blk: {
             break :open_font errify(c.TTF_OpenFont(path, 100)) catch break :blk;
         }
         const io: *c.SDL_IOStream = try errify(c.SDL_IOFromConstMem(font_data.ptr, font_data.len));
@@ -94,14 +96,8 @@ pub fn main() !void {
             var event: c.SDL_Event = undefined;
             while (c.SDL_PollEvent(&event)) {
                 switch (event.type) {
-                    c.SDL_EVENT_QUIT => {
+                    c.SDL_EVENT_QUIT, c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
                         break :main_loop;
-                    },
-                    c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
-                        switch (event.button.button) {
-                            c.SDL_BUTTON_LEFT => {},
-                            else => {},
-                        }
                     },
                     else => {},
                 }
@@ -124,7 +120,6 @@ pub fn main() !void {
 
 /// Converts the return value of an SDL function to an error union.
 inline fn errify(value: anytype) error{SdlError}!switch (@typeInfo(@TypeOf(value))) {
-
     .bool => void,
     .pointer, .optional => @TypeOf(value.?),
     .int => |info| switch (info.signedness) {
@@ -134,7 +129,7 @@ inline fn errify(value: anytype) error{SdlError}!switch (@typeInfo(@TypeOf(value
     else => @compileError("unerrifiable type: " ++ @typeName(@TypeOf(value))),
 } {
     errdefer std.log.err("{s}", .{c.SDL_GetError()});
-    
+
     return switch (@typeInfo(@TypeOf(value))) {
         .bool => if (!value) error.SdlError,
         .pointer, .optional => value orelse error.SdlError,
