@@ -46,6 +46,7 @@ pub fn main() !void {
     defer c.TTF_Quit();
 
     errify(c.SDL_SetHint(c.SDL_HINT_RENDER_VSYNC, "1")) catch {};
+    errify(c.SDL_SetHint(c.SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0")) catch {};
 
     while (true) {
         defer std.Thread.sleep(@as(usize, config.sleep_time_minutes) * 1_000_000_000 * 60);
